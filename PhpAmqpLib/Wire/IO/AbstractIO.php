@@ -46,6 +46,8 @@ abstract class AbstractIO
 
     /** @var bool */
     protected $canDispatchPcntlSignal = false;
+    
+    private $isAsyncHearbeatEnabled = false;
 
     /**
      * @param int $len
@@ -150,7 +152,7 @@ abstract class AbstractIO
         if ($this->heartbeat > 0 && ($this->last_read > 0 || $this->last_write > 0)) {
             $lastActivity = max($this->last_read, $this->last_write);
             $now = microtime(true);
-            if (($now - $lastActivity) > $this->heartbeat * 2 + 1) {
+            if (!$this->isAsyncHearbeatEnabled && (($now - $lastActivity) > $this->heartbeat * 2 + 1)) {
                 $this->close();
                 throw new AMQPHeartbeatMissedException('Missed server heartbeat');
             }
@@ -176,6 +178,39 @@ abstract class AbstractIO
             Log::info(sprintf("initial_heartbeat(%s)" , $this->heartbeat));
         }
         $this->heartbeat = $this->initial_heartbeat;
+
+        return $this;
+    }
+    
+    /**
+     * @return $this
+     */
+    public function enableAsyncHeartbeat()
+    {
+        // Only PHP 7.1+ allows handle pcntl signals with process interruption without declare(tick=1)
+        if ($this->canDispatchPcntlSignal && $this->heartbeat !== 0 && PHP_VERSION_ID >= 7010) {
+            $this->isAsyncHearbeatEnabled = true;
+
+            $beatFrequency = ceil($this->heartbeat/2);
+            pcntl_async_signals(true);
+            pcntl_signal(SIGALRM, function () use ($beatFrequency) {
+                if (!$this->isAsyncHearbeatEnabled) {
+                    return;
+                }
+
+                $this->check_heartbeat();
+                pcntl_alarm($beatFrequency);
+            });
+            pcntl_alarm($beatFrequency);
+        }
+
+        return $this;
+    }
+    
+    public function disableAsyncHeartbeat()
+    {
+        $this->last_read = microtime(true);
+        $this->isAsyncHearbeatEnabled = false;
 
         return $this;
     }
