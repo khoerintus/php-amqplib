@@ -938,6 +938,21 @@ abstract class AbstractConnection extends AbstractChannel
     {
         return $this->io;
     }
+    
+    /**
+     * Execute callback with async heartbeats
+     *
+     * @param callable $callback
+     * @return mixed
+     */
+    public function executeWithAsyncHeartbeat(callable $callback)
+    {
+        $this->io->enableAsyncHeartbeat();
+        $result = $callback();
+        $this->io->disableAsyncHeartbeat();
+
+        return $result;
+    }
 
     /**
      * Check connection heartbeat if enabled.
