@@ -1019,6 +1019,7 @@ class AMQPChannel extends AbstractChannel
      */
     protected function basic_deliver($reader, $message)
     {
+        
         $consumer_tag = $reader->read_shortstr();
         $delivery_tag = $reader->read_longlong();
         $redelivered = $reader->read_bit();
