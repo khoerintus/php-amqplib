@@ -174,9 +174,8 @@ abstract class AbstractIO
      */
     public function reenableHeartbeat()
     {
-        if(strpos($this->host, "hotel") !== false){
-            Log::info(sprintf("initial_heartbeat(%s)" , $this->heartbeat));
-        }
+        
+        Log::info(sprintf("initial_heartbeat(%s)" , $this->heartbeat));
         $this->heartbeat = $this->initial_heartbeat;
 
         return $this;
@@ -220,9 +219,8 @@ abstract class AbstractIO
      */
     protected function write_heartbeat()
     {
-        if(strpos($this->host, "hotel") !== false){
-            Log::info(sprintf("write_heartbeat(%s)" , $this->heartbeat));
-        }
+        
+        Log::info(sprintf("write_heartbeat(%s)" , $this->heartbeat));
         $pkt = new AMQPWriter();
         $pkt->write_octet(8);
         $pkt->write_short(0);
