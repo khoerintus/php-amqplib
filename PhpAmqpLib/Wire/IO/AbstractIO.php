@@ -175,7 +175,6 @@ abstract class AbstractIO
     public function reenableHeartbeat()
     {
         
-        Log::info(sprintf("initial_heartbeat(%s)" , $this->heartbeat));
         $this->heartbeat = $this->initial_heartbeat;
 
         return $this;
@@ -218,9 +217,7 @@ abstract class AbstractIO
      * Sends a heartbeat message
      */
     protected function write_heartbeat()
-    {
-        
-        Log::info(sprintf("write_heartbeat(%s)" , $this->heartbeat));
+    {   
         $pkt = new AMQPWriter();
         $pkt->write_octet(8);
         $pkt->write_short(0);
