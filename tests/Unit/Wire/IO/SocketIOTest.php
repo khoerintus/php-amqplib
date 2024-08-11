@@ -2,6 +2,7 @@
 
 namespace PhpAmqpLib\Tests\Unit\Wire\IO;
 
+use PhpAmqpLib\Exception\AMQPConnectionClosedException;
 use PhpAmqpLib\Wire\IO\SocketIO;
 use PHPUnit\Framework\TestCase;
 
@@ -25,10 +26,22 @@ class SocketIOTest extends TestCase
 
     /**
      * @test
-     * @expectedException \PhpAmqpLib\Exception\AMQPIOException
+     */
+    public function connect_ipv6()
+    {
+        $socketIO = new SocketIO(HOST6, PORT, 20, true, 20, 9);
+        $socketIO->connect();
+        $ready = $socketIO->select(0, 0);
+        $this->assertEquals(0, $ready);
+    }
+
+    /**
+     * @test
      */
     public function connect_with_invalid_credentials()
     {
+        $this->expectException(\PhpAmqpLib\Exception\AMQPIOException::class);
+
         $socket = new SocketIO('invalid_host', 5672);
         @$socket->connect();
     }
@@ -57,10 +70,11 @@ class SocketIOTest extends TestCase
     /**
      * @test
      * @depends connect
-     * @expectedException \PhpAmqpLib\Exception\AMQPSocketException
      */
     public function read_when_closed(SocketIO $socketIO)
     {
+        $this->expectException(\PhpAmqpLib\Exception\AMQPSocketException::class);
+
         $socketIO->close();
 
         $socketIO->read(1);
@@ -69,10 +83,28 @@ class SocketIOTest extends TestCase
     /**
      * @test
      * @depends connect
-     * @expectedException \PhpAmqpLib\Exception\AMQPSocketException
      */
     public function write_when_closed(SocketIO $socketIO)
     {
+        $this->expectException(\PhpAmqpLib\Exception\AMQPSocketException::class);
+
         $socketIO->write('data');
+    }
+
+    /**
+     * @test
+     * @group linux
+     * @requires OS Linux
+     */
+    public function select_must_throw_io_exception()
+    {
+        $this->expectException(AMQPConnectionClosedException::class);
+        $property = new \ReflectionProperty(SocketIO::class, 'sock');
+        $property->setAccessible(true);
+
+        $socket = new SocketIO('0.0.0.0', PORT, 0.1, false, 0.1, 0);
+        $property->setValue($socket, null);
+
+        $socket->select(0, 0);
     }
 }

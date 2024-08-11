@@ -15,16 +15,28 @@ class AMQPMessage
     const DELIVERY_MODE_NON_PERSISTENT = 1;
     const DELIVERY_MODE_PERSISTENT = 2;
 
-    /** @var string */
+    /**
+     * @var string
+     * @deprecated Will be removed in version 4.0, use getBody() instead.
+     */
     public $body;
 
-    /** @var int */
+    /**
+     * @var int
+     * @deprecated Will be removed in version 4.0, use getBodySize() instead.
+     */
     public $body_size;
 
-    /** @var bool */
+    /**
+     * @var bool
+     * @deprecated Will be removed in version 4.0, use isTruncated() instead.
+     */
     public $is_truncated = false;
 
-    /** @var string */
+    /**
+     * @var string
+     * @deprecated Will be removed in version 4.0, use getContentEncoding() instead.
+     */
     public $content_encoding;
 
     /** @var int */
@@ -54,7 +66,7 @@ class AMQPMessage
     /**
      * @var array
      * @internal
-     * @deprecated
+     * @deprecated Will be removed in version 4.0, use one of getters to get delivery info.
      */
     public $delivery_info = array();
 
@@ -100,7 +112,7 @@ class AMQPMessage
      *
      * @param bool $multiple If true, the delivery tag is treated as "up to and including",
      *                       so that multiple messages can be acknowledged with a single method.
-     * @since v2.12.0
+     * @since 2.12.0
      * @link https://www.rabbitmq.com/amqp-0-9-1-reference.html#basic.ack
      */
     public function ack($multiple = false)
@@ -117,7 +129,7 @@ class AMQPMessage
      *                       attempt fails the messages are discarded or dead-lettered.
      * @param bool $multiple If true, the delivery tag is treated as "up to and including",
      *                       so that multiple messages can be rejected with a single method.
-     * @since v2.12.0
+     * @since 2.12.0
      * @link https://www.rabbitmq.com/amqp-0-9-1-reference.html#basic.nack
      */
     public function nack($requeue = false, $multiple = false)
@@ -131,8 +143,8 @@ class AMQPMessage
      * Reject an incoming message.
      *
      * @param bool $requeue If requeue is true, the server will attempt to requeue the message.
-     *                      If requeue is false or the requeue attempt fails the messages are discarded or dead-lettered.
-     * @since v2.12.0
+     *                     If requeue is false or the requeue attempt fails the messages are discarded or dead-lettered.
+     * @since 2.12.0
      * @link https://www.rabbitmq.com/amqp-0-9-1-reference.html#basic.reject
      */
     public function reject($requeue = true)
@@ -159,7 +171,7 @@ class AMQPMessage
 
     /**
      * @return AMQPChannel|null
-     * @since v2.12.0
+     * @since 2.12.0
      */
     public function getChannel()
     {
@@ -170,7 +182,7 @@ class AMQPMessage
      * @param AMQPChannel $channel
      * @return $this
      * @throws \RuntimeException
-     * @since v2.12.0
+     * @since 2.12.0
      */
     public function setChannel($channel)
     {
@@ -189,7 +201,7 @@ class AMQPMessage
      * @param string $exchange
      * @param string $routingKey
      * @return $this
-     * @since v2.12.0
+     * @since 2.12.0
      */
     public function setDeliveryInfo($deliveryTag, $redelivered, $exchange, $routingKey)
     {
@@ -203,7 +215,7 @@ class AMQPMessage
 
     /**
      * @return bool|null
-     * @since v2.12.0
+     * @since 2.12.0
      */
     public function isRedelivered()
     {
@@ -212,7 +224,7 @@ class AMQPMessage
 
     /**
      * @return string|null
-     * @since v2.12.0
+     * @since 2.12.0
      */
     public function getExchange()
     {
@@ -221,7 +233,7 @@ class AMQPMessage
 
     /**
      * @return string|null
-     * @since v2.12.0
+     * @since 2.12.0
      */
     public function getRoutingKey()
     {
@@ -230,7 +242,7 @@ class AMQPMessage
 
     /**
      * @return string|null
-     * @since v2.12.0
+     * @since 2.12.0
      */
     public function getConsumerTag()
     {
@@ -240,7 +252,7 @@ class AMQPMessage
     /**
      * @param string $consumerTag
      * @return $this
-     * @since v2.12.0
+     * @since 2.12.0
      */
     public function setConsumerTag($consumerTag)
     {
@@ -252,7 +264,7 @@ class AMQPMessage
 
     /**
      * @return int|null
-     * @since v2.12.0
+     * @since 2.12.0
      */
     public function getMessageCount()
     {
@@ -262,7 +274,7 @@ class AMQPMessage
     /**
      * @param int $messageCount
      * @return $this
-     * @since v2.12.0
+     * @since 2.12.0
      */
     public function setMessageCount($messageCount)
     {
@@ -342,7 +354,7 @@ class AMQPMessage
     /**
      * @param int|string $deliveryTag
      * @return $this
-     * @since v2.12.0
+     * @since 2.12.0
      */
     public function setDeliveryTag($deliveryTag)
     {
@@ -525,7 +537,7 @@ class AMQPMessage
             }
 
             $flag_bits |= (1 << $shift);
-            if ($prototype != 'bit') {
+            if ($prototype !== 'bit') {
                 $raw_bytes->{'write_' . $prototype}($val);
             }
 

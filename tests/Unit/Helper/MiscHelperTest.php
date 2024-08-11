@@ -3,9 +3,9 @@
 namespace PhpAmqpLib\Tests\Unit\Helper;
 
 use PhpAmqpLib\Helper\MiscHelper;
-use PHPUnit\Framework\TestCase;
+use PhpAmqpLib\Tests\TestCaseCompat;
 
-class MiscHelperTest extends TestCase
+class MiscHelperTest extends TestCaseCompat
 {
     /**
      * @dataProvider splitSecondsMicrosecondsData
@@ -13,7 +13,7 @@ class MiscHelperTest extends TestCase
      */
     public function split_seconds_microseconds($input, $expected)
     {
-        $this->assertEquals($expected, MiscHelper::splitSecondsMicroseconds($input));
+        self::assertEquals($expected, MiscHelper::splitSecondsMicroseconds($input));
     }
 
     /**
@@ -22,7 +22,7 @@ class MiscHelperTest extends TestCase
      */
     public function hexdump($args, $expected)
     {
-        $this->assertRegExp($expected, MiscHelper::hexdump($args[0], $args[1], $args[2], $args[3]));
+        self::assertPattern($expected, MiscHelper::hexdump($args[0], $args[1], $args[2], $args[3]));
     }
 
     /**
@@ -30,10 +30,10 @@ class MiscHelperTest extends TestCase
      */
     public function method_sig()
     {
-        $this->assertEquals('test', MiscHelper::methodSig('test'));
+        self::assertEquals('test', MiscHelper::methodSig('test'));
     }
 
-    public function splitSecondsMicrosecondsData()
+    public function splitSecondsMicrosecondsData(): array
     {
         return [
             [0, [0, 0]],
@@ -50,7 +50,7 @@ class MiscHelperTest extends TestCase
         ];
     }
 
-    public function hexdumpData()
+    public function hexdumpData(): array
     {
         return [
             [['FM', false, false, true], '/000\s+46 4d\s+FM/'],

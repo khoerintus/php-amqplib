@@ -1,0 +1,114 @@
+name: PHPUnit tests
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  run:
+    runs-on: 'ubuntu-latest'
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - php: '7.2'
+            phpseclib: '^2.0'
+            composer: 'composer:v1'
+            coverage: none
+          - php: '7.3'
+            phpseclib: '^3.0'
+            composer: 'composer:v1'
+            coverage: none
+          - php: '7.4'
+            phpseclib: '^3.0'
+            composer: 'composer:v1'
+            coverage: none
+          - php: '7.4'
+            phpseclib: '^3.0'
+            composer: 'composer:v2'
+            coverage: 'xdebug'
+          - php: '8.0'
+            phpseclib: '^3.0'
+            composer: 'composer:v2'
+            coverage: none
+          - php: '8.1'
+            phpseclib: '^3.0'
+            composer: 'composer:v2'
+            coverage: none
+          - php: '8.2'
+            phpseclib: '^3.0'
+            composer: 'composer:v2'
+            coverage: none
+          - php: '8.3'
+            phpseclib: '^3.0'
+            composer: 'composer:v2'
+            coverage: none
+
+    name: PHP ${{ matrix.php }} + phpseclib ${{ matrix.phpseclib }}
+    env:
+      TOXIPROXY_HOST: localhost
+      TOXIPROXY_AMQP_TARGET: php-amqplib-rabbitmq
+      TOXIPROXY_AMQP_PORT: 5673
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Start RabbitMQ and Toxiproxy
+      id: start-rabbitmq
+      run: ${{ github.workspace }}/.ci/ubuntu/gha-setup.sh
+
+    - name: Install PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php }}
+        tools: ${{ matrix.composer }}
+        extensions: bcmath, curl, dom, mbstring, pcntl, sockets, xml
+        coverage: ${{ matrix.coverage }}
+
+    - name: Check PHP info
+      run: php tests/phpinfo.php
+
+    - name: Composer install
+      run: composer require --prefer-dist --no-progress --no-suggest phpseclib/phpseclib ${{ matrix.phpseclib }}
+
+    - name: Wait for broker service
+      run: php ./tests/wait_broker.php
+
+    - name: PHPUnit tests
+      run: ./vendor/bin/phpunit --verbose --debug
+      if: matrix.coverage == 'none'
+
+    - name: PHPUnit tests + coverage
+      run: ./vendor/bin/phpunit --verbose --debug --coverage-clover=coverage.xml
+      if: matrix.coverage != 'none'
+
+    - name: Check for errors in RabbitMQ logs
+      run: ${{ github.workspace}}/.ci/ubuntu/gha-log-check.sh
+
+    - name: Maybe collect Toxiproxy logs
+      if: failure()
+      run: docker logs proxy > ${{ github.workspace }}/tests/log/toxiproxy.log
+
+    - name: Maybe upload RabbitMQ logs
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: rabbitmq-logs-php-amqplib-${{ matrix.php }}
+        path: ${{ github.workspace }}/tests/log/
+
+    - name: Upload Codecov coverage
+      if: matrix.coverage != 'none'
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: './coverage.xml'
+        fail_ci_if_error: false
+
+    - name: Upload Scrutinizer coverage
+      if: matrix.coverage != 'none'
+      continue-on-error: true
+      uses: sudo-bot/action-scrutinizer@latest
+      with:
+          cli-args: "--format=php-clover coverage.xml"

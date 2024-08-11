@@ -1,6 +1,6 @@
 <?php
 
-namespace PhpAmqpLib\Tests\Functional;
+namespace PhpAmqpLib\Tests\Functional\Channel;
 
 use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Tests\Functional\Channel\ChannelTestCase;
@@ -10,19 +10,20 @@ use PhpAmqpLib\Tests\Functional\Channel\ChannelTestCase;
  */
 class DirectExchangeTest extends ChannelTestCase
 {
-    public function setUp()
+    protected function setUpCompat()
     {
-        parent::setUp();
+        parent::setUpCompat();
 
         $this->exchange->name = 'test_direct_exchange';
     }
 
     /**
      * @test
-     * @expectedException \PhpAmqpLib\Exception\AMQPChannelClosedException
      */
     public function exchange_declare_with_closed_connection()
     {
+        $this->expectException(\PhpAmqpLib\Exception\AMQPChannelClosedException::class);
+
         $this->connection->close();
 
         $this->channel->exchange_declare($this->exchange->name, 'direct', false, false, false);
@@ -30,10 +31,11 @@ class DirectExchangeTest extends ChannelTestCase
 
     /**
      * @test
-     * @expectedException \PhpAmqpLib\Exception\AMQPChannelClosedException
      */
     public function exchange_declare_with_closed_channel()
     {
+        $this->expectException(\PhpAmqpLib\Exception\AMQPChannelClosedException::class);
+
         $this->channel->close();
 
         $this->channel->exchange_declare($this->exchange->name, 'direct', false, false, false);
@@ -62,8 +64,7 @@ class DirectExchangeTest extends ChannelTestCase
 
         $this->channel->basic_publish($msg, $this->exchange->name, $this->queue->name);
 
-        $callback = function ($msg)
-        {
+        $callback = function ($msg) {
             $this->assertEquals($this->message->body, $msg->body);
             $this->assertEquals(getmypid(), $msg->delivery_info['consumer_tag']);
             $this->assertEquals($this->queue->name, $msg->delivery_info['routing_key']);

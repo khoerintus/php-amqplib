@@ -5,6 +5,8 @@ namespace PhpAmqpLib\Tests\Functional\Channel;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPSocketConnection;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
+use PhpAmqpLib\Exception\AMQPNoDataException;
+use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PhpAmqpLib\Message\AMQPMessage;
 use PHPUnit\Framework\TestCase;
 
@@ -38,13 +40,42 @@ class ChannelWaitTest extends TestCase
 
     /**
      * @test
+     * @group signals
+     * @covers AMQPIOReader::wait()
+     */
+    public function should_wait_until_timeout_after_signal(): void
+    {
+        $factory = $this->channelFactory(true, 30, 15);
+        $channel = $factory();
+
+        $exception = null;
+        $started = microtime(true);
+        $this->deferSignal(1);
+        $this->deferSignal(2);
+        try {
+            $result = $channel->wait(null, false, 3);
+        } catch (\Throwable $exception) {
+        }
+
+        $took = microtime(true) - $started;
+        self::assertGreaterThan(2, $took);
+        self::assertLessThan(4, $took);
+        self::assertInstanceOf(AMQPTimeoutException::class, $exception);
+
+        $this->closeChannel($channel);
+        $this->assertNull($result);
+    }
+
+    /**
+     * @test
      * @small
      * @dataProvider provide_channels
      * @param callable $factory
-     * @expectedException \PhpAmqpLib\Exception\AMQPTimeoutException
      */
     public function should_throw_timeout_exception($factory)
     {
+        $this->expectException(AMQPTimeoutException::class);
+
         $channel = $factory();
         $channel->wait(null, false, 0.01);
         $this->closeChannel($channel);
@@ -113,14 +144,32 @@ class ChannelWaitTest extends TestCase
             try {
                 if ($stream) {
                     $connection = new AMQPStreamConnection(
-                        HOST, PORT, USER, PASS, VHOST,
-                        false, 'AMQPLAIN', null, 'en_us',
-                        $connectionTimeout, $connectionTimeout, null, false, $heartBeat
+                        HOST,
+                        PORT,
+                        USER,
+                        PASS,
+                        VHOST,
+                        false,
+                        'AMQPLAIN',
+                        null,
+                        'en_us',
+                        $connectionTimeout,
+                        $connectionTimeout,
+                        null,
+                        false,
+                        $heartBeat
                     );
                 } else {
                     $connection = new AMQPSocketConnection(
-                        HOST, PORT, USER, PASS, VHOST,
-                        false, 'AMQPLAIN', null, 'en_US',
+                        HOST,
+                        PORT,
+                        USER,
+                        PASS,
+                        VHOST,
+                        false,
+                        'AMQPLAIN',
+                        null,
+                        'en_US',
                         $connectionTimeout,
                         false,
                         $connectionTimeout,
@@ -142,10 +191,10 @@ class ChannelWaitTest extends TestCase
         return $factory;
     }
 
-    protected function deferSignal($delay = 1)
+    public static function deferSignal($delay = 1)
     {
         if (!extension_loaded('pcntl')) {
-            $this->markTestSkipped('pcntl extension is not available');
+            self::markTestSkipped('pcntl extension is not available');
         }
         pcntl_signal(SIGTERM, function () {
         });

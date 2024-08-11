@@ -38,8 +38,18 @@ class ConnectionAuthTest extends AbstractConnectionTest
         $this->createUser($username, $password = 'password');
 
         try {
-            $connection = new AMQPStreamConnection(HOST, PORT, $username, $password, '/', false, 'PLAIN', null, 'en_US',
-                1);
+            $connection = new AMQPStreamConnection(
+                HOST,
+                PORT,
+                $username,
+                $password,
+                '/',
+                false,
+                'PLAIN',
+                null,
+                'en_US',
+                1
+            );
             $this->assertInstanceOf(AMQPStreamConnection::class, $connection);
             $this->assertTrue($connection->isConnected());
             $channel = $connection->channel();
@@ -52,7 +62,7 @@ class ConnectionAuthTest extends AbstractConnectionTest
 
     private function createUser($username, $password)
     {
-        $userEndpoint = HOST . ':15672/api/users/' . $username;
+        $userEndpoint = $this->getManagementBase() . 'api/users/' . $username;
         $passwordHash = '';
         if (!empty($password)) {
             $salt = substr(md5(mt_rand()), 0, 4);
@@ -80,7 +90,7 @@ class ConnectionAuthTest extends AbstractConnectionTest
         }
 
         $request = Request::put(
-            HOST . ':15672/api/permissions/%2f/' . $username,
+            $this->getManagementBase() . 'api/permissions/%2f/' . $username,
             json_encode(['configure' => '', 'write' => '.*', 'read' => '.*'])
         );
         $request->expectsJson();
@@ -93,10 +103,15 @@ class ConnectionAuthTest extends AbstractConnectionTest
 
     private function deleteUser($username)
     {
-        $userEndpoint = HOST . ':15672/api/users/' . $username;
+        $userEndpoint = $this->getManagementBase() . 'api/users/' . $username;
         $request = Request::delete($userEndpoint);
         $request->expectsJson();
         $request->basicAuth(USER, PASS);
         $request->send();
+    }
+
+    private function getManagementBase()
+    {
+        return 'https://' . HOST . ':15671/';
     }
 }

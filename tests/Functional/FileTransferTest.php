@@ -2,15 +2,14 @@
 
 namespace PhpAmqpLib\Tests\Functional;
 
-use PhpAmqpLib\Channel\AMQPChannel;
-use PhpAmqpLib\Connection\AMQPConnection;
+use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
-use PHPUnit\Framework\TestCase;
+use PhpAmqpLib\Tests\TestCaseCompat;
 
 /**
  * @group connection
  */
-class FileTransferTest extends TestCase
+class FileTransferTest extends TestCaseCompat
 {
     protected $exchangeName = 'test_exchange';
 
@@ -22,16 +21,16 @@ class FileTransferTest extends TestCase
 
     protected $messageBody;
 
-    public function setUp()
+    protected function setUpCompat()
     {
-        $this->connection = new AMQPConnection(HOST, PORT, USER, PASS, VHOST);
+        $this->connection = new AMQPStreamConnection(HOST, PORT, USER, PASS, VHOST);
         $this->channel = $this->connection->channel();
         $this->channel->exchange_declare($this->exchangeName, 'direct', false, false, false);
         list($this->queueName, ,) = $this->channel->queue_declare();
         $this->channel->queue_bind($this->queueName, $this->exchangeName, $this->queueName);
     }
 
-    public function tearDown()
+    protected function tearDownCompat()
     {
         if ($this->channel) {
             $this->channel->exchange_delete($this->exchangeName);
@@ -82,7 +81,7 @@ class FileTransferTest extends TestCase
     private function generateRandomBytes($num_bytes)
     {
         // If random_bytes exists (PHP 7) or has been polyfilled, use it
-        if ( function_exists('random_bytes') ) {
+        if (function_exists('random_bytes')) {
             return random_bytes($num_bytes);
         }
         // Otherwise, just make some noise quickly

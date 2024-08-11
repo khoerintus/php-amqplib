@@ -13,12 +13,13 @@
 use PhpAmqpLib\Connection\AMQPConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 
-require_once __DIR__ . '/config.php';
+require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/../tests/config.php';
 
 //suboptimal function to generate random content
 function generate_random_content($bytes)
 {
-    $handle = @fopen("/dev/urandom", "rb");
+    $handle = @fopen('/dev/urandom', 'rb');
 
     $buffer = '';
     if ($handle) {

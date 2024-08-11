@@ -2,73 +2,57 @@
 
 namespace PhpAmqpLib\Tests\Functional;
 
-use Httpful\Request;
 use PhpAmqpLib\Channel\AbstractChannel;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AbstractConnection;
-use PhpAmqpLib\Connection\AMQPSocketConnection;
-use PhpAmqpLib\Connection\AMQPStreamConnection;
+use PhpAmqpLib\Connection\AMQPConnectionConfig;
+use PhpAmqpLib\Connection\AMQPConnectionFactory;
 use PhpAmqpLib\Exchange\AMQPExchangeType;
-use PHPUnit\Framework\TestCase;
+use PhpAmqpLib\Tests\TestCaseCompat;
 
-abstract class AbstractConnectionTest extends TestCase
+abstract class AbstractConnectionTest extends TestCaseCompat
 {
     public static $blocked = false;
 
-    /**
-     * @param string $type
-     * @param string $host
-     * @param string $port
-     * @param array $options
-     * @return AbstractConnection
-     */
-    protected function conection_create($type = 'stream', $host = HOST, $port = PORT, $options = array())
-    {
-        $keepalive = isset($options['keepalive']) ? $options['keepalive'] : false;
-        $heartbeat = isset($options['heartbeat']) ? $options['heartbeat'] : 0;
-        $timeout = isset($options['timeout']) ? $options['timeout'] : 1;
-        $connectionTimeout = isset($options['connectionTimeout']) ? $options['connectionTimeout'] : $timeout;
-
-        switch ($type) {
-            case 'stream':
-                $connection = new AMQPStreamConnection(
-                    $host,
-                    $port,
-                    USER,
-                    PASS,
-                    VHOST,
-                    false,
-                    'AMQPLAIN',
-                    null,
-                    'en_US',
-                    $connectionTimeout,
-                    $timeout,
-                    null,
-                    $keepalive,
-                    $heartbeat
-                );
-                break;
-            case 'socket':
-                $connection = new AMQPSocketConnection(
-                    $host,
-                    $port,
-                    USER,
-                    PASS,
-                    VHOST,
-                    false,
-                    'AMQPLAIN',
-                    null,
-                    'en_US',
-                    $timeout,
-                    $keepalive,
-                    $timeout,
-                    $heartbeat
-                );
-                break;
-            default:
+    protected function connection_create(
+        string $type = 'stream',
+        string $host = HOST,
+        int $port = PORT,
+        array $options = array()
+    ): AbstractConnection {
+        $timeout = $options['timeout'] ?? 1;
+        $lazy = $options['lazy'] ?? false;
+        $config = new AMQPConnectionConfig();
+        $config->setIsLazy($lazy);
+        if ($type === 'ssl') {
+            $config->setIoType(AMQPConnectionConfig::IO_TYPE_STREAM);
+            $config->setIsSecure(true);
+            $config->setNetworkProtocol($options['protocol'] ?? 'ssl');
+            $config->setSslCryptoMethod($options['ssl']['crypto_method'] ?? null);
+            $config->setSslCaCert($options['ssl']['cafile'] ?? null);
+            $config->setSslCaPath($options['ssl']['capath'] ?? null);
+            $config->setSslCert($options['ssl']['local_cert'] ?? null);
+            $config->setSslKey($options['ssl']['local_pk'] ?? null);
+            $config->setSslVerify($options['ssl']['verify_peer'] ?? null);
+            $config->setSslVerifyName($options['ssl']['verify_peer_name'] ?? null);
+            $config->setSslPassPhrase($options['ssl']['passphrase'] ?? null);
+            $config->setSslCiphers($options['ssl']['ciphers'] ?? null);
+        } else {
+            $config->setIoType($type);
         }
+        $config->setHost($host);
+        $config->setPort($port);
+        $config->setKeepalive($options['keepalive'] ?? false);
+        $config->setHeartbeat($options['heartbeat'] ?? 0);
+        $config->setReadTimeout($timeout);
+        $config->setWriteTimeout($timeout);
+        $config->setConnectionTimeout($options['connectionTimeout'] ?? $timeout);
+        $config->setSendBufferSize(16384);
 
-        $this->assertTrue($connection->isConnected());
+        $connection = AMQPConnectionFactory::create($config);
+        if (!$lazy) {
+            $this->assertTrue($connection->isConnected());
+        }
 
         return $connection;
     }
@@ -87,7 +71,7 @@ abstract class AbstractConnectionTest extends TestCase
      */
     protected function channel_create($connectionType, $options = [])
     {
-        $connection = $this->conection_create($connectionType, HOST, PORT, $options);
+        $connection = $this->connection_create($connectionType, HOST, PORT, $options);
         $channel = $connection->channel();
         $this->assertTrue($channel->is_open());
 
@@ -100,8 +84,12 @@ abstract class AbstractConnectionTest extends TestCase
      */
     protected function create_proxy($name = 'amqp_connection')
     {
+        $host = trim(getenv('TOXIPROXY_AMQP_TARGET'));
+        if (empty($host)) {
+            $host = HOST;
+        }
         $proxy = new ToxiProxy($name, $this->get_toxiproxy_host());
-        $proxy->open(HOST, PORT, $this->get_toxiproxy_amqp_port());
+        $proxy->open($host, PORT, $this->get_toxiproxy_amqp_port());
 
         return $proxy;
     }
@@ -130,7 +118,6 @@ abstract class AbstractConnectionTest extends TestCase
     {
         $this->assertFalse($connection->isConnected());
         $this->assertNotNull($connection->getIO());
-        $this->assertNull($connection->getIO()->getSocket());
         // all channels must be closed
         foreach ($connection->channels as $ch) {
             if ($ch instanceof AMQPChannel) {
@@ -153,7 +140,8 @@ abstract class AbstractConnectionTest extends TestCase
 // mock low level IO write functions
 namespace PhpAmqpLib\Wire\IO;
 
-function fwrite() {
+function fwrite()
+{
     if (\PhpAmqpLib\Tests\Functional\AbstractConnectionTest::$blocked) {
         return 0;
     }
@@ -163,7 +151,8 @@ function fwrite() {
 
 namespace PhpAmqpLib\Wire\IO;
 
-function socket_write() {
+function socket_write()
+{
     if (\PhpAmqpLib\Tests\Functional\AbstractConnectionTest::$blocked) {
         return 0;
     }

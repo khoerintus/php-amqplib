@@ -2,8 +2,6 @@
 
 namespace PhpAmqpLib\Tests\Functional\Bug;
 
-use PhpAmqpLib\Connection\AMQPSocketConnection;
-use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Tests\Functional\AbstractConnectionTest;
 use PhpAmqpLib\Wire\AMQPTable;
@@ -29,21 +27,21 @@ class Bug256Test extends AbstractConnectionTest
 
     protected $channel2;
 
-    public function setUp()
+    protected function setUpCompat()
     {
-        $this->connection = $this->conection_create('socket');
+        $this->connection = $this->connection_create('socket');
         $this->channel = $this->connection->channel();
 
         $this->channel->exchange_declare($this->exchangeName, 'direct', false, true, false);
 
-        $this->connection2 = $this->conection_create('stream');
+        $this->connection2 = $this->connection_create('stream');
         $this->channel2 = $this->connection->channel();
 
         list($this->queueName, ,) = $this->channel2->queue_declare();
         $this->channel2->queue_bind($this->queueName, $this->exchangeName, $this->queueName);
     }
 
-    public function tearDown()
+    protected function tearDownCompat()
     {
         if ($this->channel) {
             $this->channel->exchange_delete($this->exchangeName);
